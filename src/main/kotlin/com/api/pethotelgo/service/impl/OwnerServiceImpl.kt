@@ -1,11 +1,12 @@
 package com.api.pethotelgo.service.impl
 
+import com.api.pethotelgo.exception.OwnerNotFoundException
+import com.api.pethotelgo.exception.ValidationException
 import com.api.pethotelgo.model.entity.Owner
 import com.api.pethotelgo.repository.OwnerRepository
 import com.api.pethotelgo.service.OwnerService
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
+ 
 
 @Service
 class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerService {
@@ -13,7 +14,7 @@ class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerServ
     override fun getAllOwners(): List<Owner> = ownerRepository.findAll()
 
     override fun getOwnerById(id: String): Owner = ownerRepository.findById(id)
-        .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found") }
+        .orElseThrow { OwnerNotFoundException() }
 
     override fun createOwner(owner: Owner): Owner {
         validateOwnerData(owner)
@@ -36,23 +37,22 @@ class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerServ
     override fun validateOwnerData(owner: Owner) {
         // Business Rule 1: Name cannot be empty or blank
         if (owner.name.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Owner name is required")
+            throw ValidationException("Owner name is required")
         }
 
         // Business Rule 2: Phone must be provided and non-empty
         if (owner.phone.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Owner phone is required")
+            throw ValidationException("Owner phone is required")
         }
 
         // Business Rule 3: Phone must be at least 8 digits
         if (owner.phone.replace(Regex("[^0-9]"), "").length < 8) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Phone must have at least 8 digits")
+            throw ValidationException("Phone must have at least 8 digits")
         }
 
         // Business Rule 4: Name length validation
         if (owner.name.length > 100) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Owner name cannot exceed 100 characters")
-        }
+            throw ValidationException("Owner name cannot exceed 100 characters")
     }
 }
-
+}

@@ -1,28 +1,16 @@
 package com.api.pethotelgo.controller
 
+import com.api.pethotelgo.controller.api.ReservationApi
+import com.api.pethotelgo.exception.ValidationException
 import com.api.pethotelgo.model.entity.Reservation
 import com.api.pethotelgo.service.ReservationService
-import org.springframework.format.annotation.DateTimeFormat
-import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
-import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.tags.Tag
-import io.swagger.v3.oas.annotations.security.SecurityRequirement
-import io.swagger.v3.oas.annotations.parameters.RequestBody
 
 @RestController
-@RequestMapping("/reservations")
-@Tag(name = "Reservations", description = "Pet reservation management endpoints")
-@SecurityRequirement(name = "bearer-jwt")
-class ReservationController(private val reservationService: ReservationService) {
+class ReservationController(private val reservationService: ReservationService) : ReservationApi {
 
-    @GetMapping
-    @Operation(
-        summary = "List reservations",
-        description = "Get all reservations, optionally filtered by date"
-    )
-    fun getAll(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate?): List<Reservation> {
+    override fun getAll(date: LocalDate?): List<Reservation> {
         return if (date != null) {
             reservationService.getReservationsByDate(date)
         } else {
@@ -30,33 +18,19 @@ class ReservationController(private val reservationService: ReservationService) 
         }
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get reservation by ID", description = "Get specific reservation details")
-    fun getById(@PathVariable id: String): Reservation = reservationService.getReservationById(id)
+    override fun getById(id: String): Reservation = reservationService.getReservationById(id)
 
-    @GetMapping("/pet/{petId}")
-    @Operation(summary = "Get pet's reservations", description = "Get all reservations for a specific pet")
-    fun getByPetPath(@PathVariable petId: String): List<Reservation> = reservationService.getReservationsByPetId(petId)
+    override fun getByPetPath(petId: String): List<Reservation> = reservationService.getReservationsByPetId(petId)
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Create reservation", description = "Create a new pet reservation")
-    fun create(@RequestBody reservation: Reservation): Reservation = reservationService.createReservation(reservation)
+    override fun create(reservation: Reservation): Reservation = reservationService.createReservation(reservation)
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update reservation", description = "Update reservation details")
-    fun update(@PathVariable id: String, @RequestBody data: Reservation): Reservation =
+    override fun update(id: String, data: Reservation): Reservation =
         reservationService.updateReservation(id, data)
 
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete reservation", description = "Delete a pending reservation")
-    fun delete(@PathVariable id: String) = reservationService.deleteReservation(id)
+    override fun delete(id: String) = reservationService.deleteReservation(id)
 
-    @PatchMapping("/{id}/status")
-    @Operation(summary = "Update reservation status", description = "Change reservation status (pending → confirmed/cancelled → completed/cancelled)")
-    fun updateStatus(@PathVariable id: String, @RequestBody body: Map<String, String>): Reservation {
-        val status = body["status"] ?: throw IllegalArgumentException("Status is required")
+    override fun updateStatus(id: String, body: Map<String, String>): Reservation {
+        val status = body["status"] ?: throw ValidationException("Status is required")
         return reservationService.updateReservationStatus(id, status)
     }
 }

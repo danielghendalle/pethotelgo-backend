@@ -1,5 +1,6 @@
 package com.api.pethotelgo.service.impl
 
+import com.api.pethotelgo.exception.*
 import com.api.pethotelgo.model.dto.AuthResponse
 import com.api.pethotelgo.model.dto.LoginRequest
 import com.api.pethotelgo.model.dto.RegisterRequest
@@ -11,10 +12,8 @@ import com.api.pethotelgo.repository.UserRepository
 import com.api.pethotelgo.repository.RefreshTokenRepository
 import com.api.pethotelgo.security.JwtTokenProvider
 import com.api.pethotelgo.service.AuthService
-import org.springframework.http.HttpStatus
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.util.UUID
 import java.security.MessageDigest
@@ -43,7 +42,7 @@ class AuthServiceImpl(
         validateRegisterRequest(request)
 
         if (userRepository.existsByEmail(request.email)) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Email already registered")
+            throw ConflictException("Email already registered")
         }
 
         val user = User(
@@ -88,14 +87,14 @@ class AuthServiceImpl(
         }
 
         if (token == null) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token")
+            throw ApiException(ErrorCode.UNAUTHORIZED, "Invalid refresh token")
         }
 
         if (!token.isValid()) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired or revoked")
+            throw ApiException(ErrorCode.UNAUTHORIZED, "Refresh token expired or revoked")
         }
 
-        val user = token.user ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
+        val user = token.user ?: throw UserNotFoundException()
         val newAccessToken = jwtTokenProvider.generateToken(user)
 
         return AuthResponse(
@@ -107,14 +106,14 @@ class AuthServiceImpl(
 
     override fun validateCredentials(email: String, password: String): User {
         val user = userRepository.findByEmail(email)
-            .orElseThrow { ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password") }
+            .orElseThrow { ApiException(ErrorCode.UNAUTHORIZED, "Invalid email or password") }
 
         if (!passwordEncoder.matches(password, user.passwordHash)) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password")
+            throw ApiException(ErrorCode.UNAUTHORIZED, "Invalid email or password")
         }
 
         if (!user.isActive) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "User account is inactive")
+            throw ApiException(ErrorCode.FORBIDDEN, "User account is inactive")
         }
 
         return user
@@ -142,31 +141,31 @@ class AuthServiceImpl(
 
     private fun validateRegisterRequest(request: RegisterRequest) {
         if (request.name.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required")
+            throw ValidationException("Name is required")
         }
 
         if (request.name.length > 100) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot exceed 100 characters")
+            throw ValidationException("Name cannot exceed 100 characters")
         }
 
         if (request.email.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required")
+            throw ValidationException("Email is required")
         }
 
         if (!isValidEmail(request.email)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email format")
+            throw ValidationException("Invalid email format")
         }
 
         if (request.password.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required")
+            throw ValidationException("Password is required")
         }
 
         if (request.password.length < 6) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 6 characters")
+            throw ValidationException("Password must be at least 6 characters")
         }
 
         if (request.password.length > 50) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Password cannot exceed 50 characters")
+            throw ValidationException("Password cannot exceed 50 characters")
         }
     }
 

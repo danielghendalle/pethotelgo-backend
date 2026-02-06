@@ -1,13 +1,15 @@
 package com.api.pethotelgo.service.impl
 
+import com.api.pethotelgo.exception.OwnerNotFoundException
+import com.api.pethotelgo.exception.PetNotFoundException
+import com.api.pethotelgo.exception.ValidationException
 import com.api.pethotelgo.model.entity.Pet
 import com.api.pethotelgo.model.enums.SociabilityLevel
 import com.api.pethotelgo.repository.PetRepository
 import com.api.pethotelgo.repository.OwnerRepository
 import com.api.pethotelgo.service.PetService
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
+ 
 
 @Service
 class PetServiceImpl(
@@ -18,12 +20,12 @@ class PetServiceImpl(
     override fun getAllPets(): List<Pet> = petRepository.findAll()
 
     override fun getPetById(id: String): Pet = petRepository.findById(id)
-        .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Pet not found") }
+        .orElseThrow { PetNotFoundException() }
 
     override fun getPetsByOwnerId(ownerId: String): List<Pet> {
         // Business Rule: Verify owner exists
         ownerRepository.findById(ownerId)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found") }
+            .orElseThrow { OwnerNotFoundException() }
         return petRepository.findByOwnerId(ownerId)
     }
 
@@ -33,7 +35,7 @@ class PetServiceImpl(
         // Business Rule: Verify owner exists before associating
         pet.owner?.let { ownerRef ->
             ownerRepository.findById(ownerRef.id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found") }
+                .orElseThrow { OwnerNotFoundException() }
         }
 
         return petRepository.save(pet)
@@ -46,7 +48,7 @@ class PetServiceImpl(
         // Business Rule: Verify owner exists if changing owner
         data.owner?.let { ownerRef ->
             ownerRepository.findById(ownerRef.id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found") }
+                .orElseThrow { OwnerNotFoundException() }
         }
 
         existing.name = data.name
@@ -72,37 +74,37 @@ class PetServiceImpl(
     override fun validatePetData(pet: Pet) {
         // Business Rule 1: Pet name is required
         if (pet.name.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet name is required")
+            throw ValidationException("Pet name is required")
         }
 
         // Business Rule 2: Pet name length validation
         if (pet.name.length > 50) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet name cannot exceed 50 characters")
+            throw ValidationException("Pet name cannot exceed 50 characters")
         }
 
         // Business Rule 3: Breed is required
         if (pet.breed.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet breed is required")
+            throw ValidationException("Pet breed is required")
         }
 
         // Business Rule 4: Breed length validation
         if (pet.breed.length > 50) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet breed cannot exceed 50 characters")
+            throw ValidationException("Pet breed cannot exceed 50 characters")
         }
 
         // Business Rule 5: Feeding schedule is required
         if (pet.feedingSchedule.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet feeding schedule is required")
+            throw ValidationException("Pet feeding schedule is required")
         }
 
         // Business Rule 6: Feeding amount is required
         if (pet.feedingAmount.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet feeding amount is required")
+            throw ValidationException("Pet feeding amount is required")
         }
 
         // Business Rule 7: Low sociability pets MUST have separate space
         if (pet.sociability == SociabilityLevel.baixa && !pet.needsSeparateSpace) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Low sociability pets must have separate space")
+            throw ValidationException("Low sociability pets must have separate space")
         }
 
         // Business Rule 8: High sociability pets should NOT require separate space (warning but allowed)
@@ -111,13 +113,13 @@ class PetServiceImpl(
         // Business Rule 9: Vaccination card URL format validation if provided
         if (pet.vaccinationCardUrl != null && pet.vaccinationCardUrl!!.isNotBlank()) {
             if (!isValidUrl(pet.vaccinationCardUrl!!)) {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid vaccination card URL format")
+                throw ValidationException("Invalid vaccination card URL format")
             }
         }
 
         // Business Rule 10: Owner must be associated
         if (pet.owner == null || pet.owner!!.id.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet must be associated with an owner")
+            throw ValidationException("Pet must be associated with an owner")
         }
     }
 
@@ -130,5 +132,4 @@ class PetServiceImpl(
         }
     }
 }
-
 
