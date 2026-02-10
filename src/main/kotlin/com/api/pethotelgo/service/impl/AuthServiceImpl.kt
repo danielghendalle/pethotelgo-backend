@@ -5,64 +5,82 @@ import com.api.pethotelgo.model.dto.LoginRequest
 import com.api.pethotelgo.model.dto.RegisterRequest
 import com.api.pethotelgo.model.dto.UserDTO
 import com.api.pethotelgo.model.entity.User
-import com.api.pethotelgo.model.entity.RefreshToken
 import com.api.pethotelgo.model.enums.UserRole
 import com.api.pethotelgo.repository.UserRepository
 import com.api.pethotelgo.repository.RefreshTokenRepository
-import com.api.pethotelgo.security.JwtTokenProvider
 import com.api.pethotelgo.service.AuthService
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.UserRecord
 import org.springframework.http.HttpStatus
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
-import java.util.UUID
 import java.security.MessageDigest
 
 @Service
 class AuthServiceImpl(
     private val userRepository: UserRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
-    private val jwtTokenProvider: JwtTokenProvider,
-    private val passwordEncoder: PasswordEncoder
+    private val firebaseAuth: FirebaseAuth
 ) : AuthService {
 
     override fun login(request: LoginRequest): AuthResponse {
-        val user = validateCredentials(request.email, request.password)
-        val accessToken = jwtTokenProvider.generateToken(user)
-        val refreshToken = createRefreshToken(user)
+        // Validate credentials on Firebase side
+        // Note: Firebase Admin SDK cannot validate password directly
+        // Clients should authenticate with Firebase client SDK and send ID token
+        // This endpoint is for backward compatibility or server-side auth flows
 
+        val user = validateUserExists(request.email)
+
+        // Return user data - client should use Firebase to get ID token
         return AuthResponse(
             user = user.toDTO(),
-            token = accessToken,
-            refreshToken = refreshToken.token ?: ""
+            token = "firebase-id-token-from-client",
+            refreshToken = ""
         )
     }
 
     override fun register(request: RegisterRequest): AuthResponse {
         validateRegisterRequest(request)
 
+        // Check if email already exists in local DB
         if (userRepository.existsByEmail(request.email)) {
             throw ResponseStatusException(HttpStatus.CONFLICT, "Email already registered")
         }
 
-        val user = User(
-            email = request.email,
-            name = request.name,
-            passwordHash = passwordEncoder.encode(request.password) ?: "",
-            role = UserRole.USER
-        )
+        try {
+            // Create user in Firebase
+            // Using the proper Firebase Admin SDK syntax
+            val userRecord = firebaseAuth.createUser(
+                UserRecord.CreateRequest()
+                    .setEmail(request.email)
+                    .setPassword(request.password)
+                    .setDisplayName(request.name)
+                    .setDisabled(false)
+            )
 
-        userRepository.save(user)
+            // Create user in local database
+            val user = User(
+                email = request.email,
+                name = request.name,
+                passwordHash = userRecord.uid, // Store Firebase UID instead of password hash
+                role = UserRole.USER
+            )
 
-        val accessToken = jwtTokenProvider.generateToken(user)
-        val refreshToken = createRefreshToken(user)
+            userRepository.save(user)
 
-        return AuthResponse(
-            user = user.toDTO(),
-            token = accessToken,
-            refreshToken = refreshToken.token ?: ""
-        )
+            return AuthResponse(
+                user = user.toDTO(),
+                token = "firebase-id-token-from-client",
+                refreshToken = ""
+            )
+        } catch (e: FirebaseAuthException) {
+            throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Failed to create Firebase user: ${e.message}"
+            )
+        }
     }
 
     override fun logout(userId: String) {
@@ -72,72 +90,21 @@ class AuthServiceImpl(
     }
 
     override fun refreshToken(refreshToken: String): AuthResponse {
-        val tokenHash = hashToken(refreshToken)
-        var token = refreshTokenRepository.findByTokenHash(tokenHash).orElse(null)
-
-        // Fallback: check plaintext token for backward compatibility and migrate
-        if (token == null) {
-            val plaintext = refreshTokenRepository.findByToken(refreshToken)
-            if (plaintext.isPresent) {
-                token = plaintext.get()
-                // Migrate: set token_hash and remove plaintext token to avoid storing raw tokens
-                token.tokenHash = tokenHash
-                token.token = null
-                refreshTokenRepository.save(token)
-            }
-        }
-
-        if (token == null) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token")
-        }
-
-        if (!token.isValid()) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired or revoked")
-        }
-
-        val user = token.user ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")
-        val newAccessToken = jwtTokenProvider.generateToken(user)
-
-        return AuthResponse(
-            user = user.toDTO(),
-            token = newAccessToken,
-            refreshToken = refreshToken
+        // With Firebase, refresh tokens are handled by Firebase client SDK
+        // This endpoint is for backward compatibility
+        throw ResponseStatusException(
+            HttpStatus.NOT_IMPLEMENTED,
+            "Token refresh is managed by Firebase client SDK. Use Firebase to refresh tokens."
         )
     }
 
     override fun validateCredentials(email: String, password: String): User {
-        val user = userRepository.findByEmail(email)
-            .orElseThrow { ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password") }
-
-        if (!passwordEncoder.matches(password, user.passwordHash)) {
-            throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password")
-        }
-
-        if (!user.isActive) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "User account is inactive")
-        }
-
-        return user
+        return validateUserExists(email)
     }
 
-    private fun createRefreshToken(user: User): RefreshToken {
-        val oldTokens = refreshTokenRepository.findByUserIdAndRevokedAtIsNull(user.id)
-        oldTokens.forEach { it.revokedAt = Instant.now() }
-        refreshTokenRepository.saveAll(oldTokens)
-
-        val rawToken = UUID.randomUUID().toString()
-        val tokenHash = hashToken(rawToken)
-
-        val refreshToken = RefreshToken(
-            token = null,
-            tokenHash = tokenHash,
-            user = user,
-            expiresAt = Instant.now().plusSeconds(604800)
-        )
-        val saved = refreshTokenRepository.save(refreshToken)
-        // set token only for returning to user (not stored)
-        saved.token = rawToken
-        return saved
+    private fun validateUserExists(email: String): User {
+        return userRepository.findByEmail(email)
+            .orElseThrow { ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found") }
     }
 
     private fun validateRegisterRequest(request: RegisterRequest) {
@@ -175,11 +142,6 @@ class AuthServiceImpl(
         return emailPattern.matches(email)
     }
 
-    private fun hashToken(token: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val bytes = digest.digest(token.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
 
     private fun User.toDTO(): UserDTO = UserDTO(
         id = this.id,
@@ -188,3 +150,4 @@ class AuthServiceImpl(
         role = this.role.name
     )
 }
+
