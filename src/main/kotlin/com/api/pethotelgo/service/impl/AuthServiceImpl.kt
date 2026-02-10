@@ -1,5 +1,6 @@
 package com.api.pethotelgo.service.impl
 
+import com.api.pethotelgo.exception.*
 import com.api.pethotelgo.model.dto.AuthResponse
 import com.api.pethotelgo.model.dto.LoginRequest
 import com.api.pethotelgo.model.dto.RegisterRequest
@@ -14,7 +15,6 @@ import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.UserRecord
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import java.time.Instant
 import java.security.MessageDigest
 
@@ -46,7 +46,7 @@ class AuthServiceImpl(
 
         // Check if email already exists in local DB
         if (userRepository.existsByEmail(request.email)) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Email already registered")
+            throw ConflictException("Email already registered")
         }
 
         try {
@@ -109,31 +109,31 @@ class AuthServiceImpl(
 
     private fun validateRegisterRequest(request: RegisterRequest) {
         if (request.name.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Name is required")
+            throw ValidationException("Name is required")
         }
 
         if (request.name.length > 100) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot exceed 100 characters")
+            throw ValidationException("Name cannot exceed 100 characters")
         }
 
         if (request.email.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is required")
+            throw ValidationException("Email is required")
         }
 
         if (!isValidEmail(request.email)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email format")
+            throw ValidationException("Invalid email format")
         }
 
         if (request.password.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required")
+            throw ValidationException("Password is required")
         }
 
         if (request.password.length < 6) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Password must be at least 6 characters")
+            throw ValidationException("Password must be at least 6 characters")
         }
 
         if (request.password.length > 50) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Password cannot exceed 50 characters")
+            throw ValidationException("Password cannot exceed 50 characters")
         }
     }
 

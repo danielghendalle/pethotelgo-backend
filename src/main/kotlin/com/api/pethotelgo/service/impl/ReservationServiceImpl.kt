@@ -1,5 +1,6 @@
 package com.api.pethotelgo.service.impl
 
+import com.api.pethotelgo.exception.*
 import com.api.pethotelgo.model.entity.Reservation
 import com.api.pethotelgo.model.dto.DayCapacity
 import com.api.pethotelgo.model.enums.ReservationStatus
@@ -7,9 +8,7 @@ import com.api.pethotelgo.repository.ReservationRepository
 import com.api.pethotelgo.repository.PetRepository
 import com.api.pethotelgo.repository.OwnerRepository
 import com.api.pethotelgo.service.ReservationService
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.server.ResponseStatusException
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -28,7 +27,7 @@ class ReservationServiceImpl(
     override fun getAllReservations(): List<Reservation> = reservationRepository.findAll()
 
     override fun getReservationById(id: String): Reservation = reservationRepository.findById(id)
-        .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Reservation not found") }
+        .orElseThrow { ReservationNotFoundException() }
 
     override fun getReservationsByDate(date: LocalDate): List<Reservation> {
         val zone = ZoneId.systemDefault()
@@ -42,7 +41,7 @@ class ReservationServiceImpl(
     override fun getReservationsByPetId(petId: String): List<Reservation> {
         // Business Rule: Verify pet exists
         petRepository.findById(petId)
-            .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Pet not found") }
+            .orElseThrow { PetNotFoundException() }
         return reservationRepository.findByPetId(petId)
     }
 
@@ -52,22 +51,25 @@ class ReservationServiceImpl(
         // Business Rule: Verify pet exists
         reservation.pet?.let { petRef ->
             petRepository.findById(petRef.id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Pet not found") }
+                .orElseThrow { PetNotFoundException() }
         }
 
         // Business Rule: Verify owner exists
         reservation.owner?.let { ownerRef ->
             ownerRepository.findById(ownerRef.id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found") }
+                .orElseThrow { OwnerNotFoundException() }
         }
 
         // Business Rule: Check for overlapping reservations for the same pet
-        val petId = reservation.pet?.id ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet is required")
+        val petId = reservation.pet?.id ?: throw ValidationException("Pet is required")
         val existingReservations = reservationRepository.findByPetId(petId)
             .filter { it.status in listOf(ReservationStatus.confirmed, ReservationStatus.pending) }
 
         if (hasConflict(reservation, existingReservations)) {
-            throw ResponseStatusException(HttpStatus.CONFLICT, "Pet already has a reservation during this period")
+            throw ConflictException(
+                message = "Pet already has a reservation during this period",
+                code = ErrorCode.RESERVATION_CONFLICT
+            )
         }
 
         // Business Rule: Check daily capacity
@@ -78,7 +80,7 @@ class ReservationServiceImpl(
         while (!currentDate.isAfter(endDate)) {
             val dayCapacity = checkDayCapacity(currentDate)
             if (dayCapacity.isFull) {
-                throw ResponseStatusException(HttpStatus.CONFLICT, "Hotel is at full capacity on $currentDate")
+                throw ApiException(ErrorCode.CAPACITY_FULL, "Hotel is at full capacity on $currentDate")
             }
             currentDate = currentDate.plusDays(1)
         }
@@ -92,19 +94,19 @@ class ReservationServiceImpl(
 
         // Business Rule: Cannot update dates if reservation is completed or cancelled
         if (existing.status in listOf(ReservationStatus.completed, ReservationStatus.cancelled)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot update a ${existing.status} reservation")
+            throw BusinessRuleException("Cannot update a ${existing.status} reservation")
         }
 
         // Business Rule: Verify pet exists if changing
         data.pet?.let { petRef ->
             petRepository.findById(petRef.id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Pet not found") }
+                .orElseThrow { PetNotFoundException() }
         }
 
         // Business Rule: Verify owner exists if changing
         data.owner?.let { ownerRef ->
             ownerRepository.findById(ownerRef.id)
-                .orElseThrow { ResponseStatusException(HttpStatus.NOT_FOUND, "Owner not found") }
+                .orElseThrow { OwnerNotFoundException() }
         }
 
         existing.checkIn = data.checkIn
@@ -121,7 +123,7 @@ class ReservationServiceImpl(
 
         // Business Rule: Can only delete pending reservations
         if (reservation.status != ReservationStatus.pending) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Can only delete pending reservations")
+            throw BusinessRuleException("Can only delete pending reservations")
         }
 
         reservationRepository.delete(reservation)
@@ -133,13 +135,12 @@ class ReservationServiceImpl(
         val status = try {
             ReservationStatus.valueOf(newStatus)
         } catch (_: Exception) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid reservation status")
+            throw ValidationException("Invalid reservation status")
         }
 
         // Business Rule: Validate status transitions
         if (!isValidStatusTransition(reservation.status, status)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST,
-                "Cannot transition from ${reservation.status} to $status")
+            throw BusinessRuleException("Cannot transition from ${reservation.status} to $status")
         }
 
         reservation.status = status
@@ -171,17 +172,17 @@ class ReservationServiceImpl(
     override fun validateReservationData(reservation: Reservation) {
         // Business Rule 1: Pet is required
         if (reservation.pet == null || reservation.pet!!.id.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Pet is required")
+            throw ValidationException("Pet is required")
         }
 
         // Business Rule 2: Owner is required
         if (reservation.owner == null || reservation.owner!!.id.isBlank()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Owner is required")
+            throw ValidationException("Owner is required")
         }
 
         // Business Rule 3: Check-in must be before check-out
         if (!reservation.checkIn.isBefore(reservation.checkOut)) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Check-in must be before check-out")
+            throw ValidationException("Check-in must be before check-out")
         }
 
         // Business Rule 4: Minimum reservation duration (at least 1 day)
@@ -190,19 +191,19 @@ class ReservationServiceImpl(
             reservation.checkOut.atZone(ZoneId.systemDefault()).toLocalDate()
         )
         if (daysDifference < MIN_RESERVATION_DAYS) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation must be at least $MIN_RESERVATION_DAYS day(s)")
+            throw ValidationException("Reservation must be at least $MIN_RESERVATION_DAYS day(s)")
         }
 
         // Business Rule 5: Cannot reserve in the past
         if (reservation.checkIn.isBefore(java.time.Instant.now())) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot create reservation in the past")
+            throw ValidationException("Cannot create reservation in the past")
         }
 
         // Business Rule 6: Maximum reservation length (e.g., 30 days)
         if (daysDifference > 30) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Reservation cannot exceed 30 days")
+            throw ValidationException("Reservation cannot exceed 30 days")
         }
-    }
+}
 
     private fun hasConflict(newReservation: Reservation, existingReservations: List<Reservation>): Boolean {
         return existingReservations.any { existing ->
@@ -224,4 +225,3 @@ class ReservationServiceImpl(
         }
     }
 }
-
