@@ -10,13 +10,12 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
-import org.springframework.web.filter.CorsFilter
-import com.api.pethotelgo.security.JwtAuthenticationFilter
+import com.api.pethotelgo.security.FirebaseAuthenticationFilter
 
 @Configuration
 @EnableWebSecurity
 class WebSecurityConfig(
-    private val jwtAuthenticationFilter: JwtAuthenticationFilter,
+    private val firebaseAuthenticationFilter: FirebaseAuthenticationFilter,
     @Value("\${app.cors.allowed-origins:}")
     private val allowedOrigins: String,
     @Value("\${app.swagger.enabled:false}")
@@ -46,7 +45,7 @@ class WebSecurityConfig(
                     // All other endpoints require authentication
                     .anyRequest().authenticated()
             }
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
+            .addFilterBefore(firebaseAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         return http.build()
     }
