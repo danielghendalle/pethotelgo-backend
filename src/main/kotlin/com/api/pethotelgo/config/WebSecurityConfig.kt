@@ -12,6 +12,11 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import com.api.pethotelgo.security.FirebaseAuthenticationFilter
 
+private const val CORS_ALLOW_ALL = "/**"
+private const val CONTENT_TYPE = "Content-Type"
+private const val AUTHORIZATION = "Authorization"
+private const val CACHE_CONTROL = "Cache-Control"
+
 @Configuration
 @EnableWebSecurity
 class WebSecurityConfig(
@@ -28,21 +33,16 @@ class WebSecurityConfig(
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .cors { it.configurationSource(corsConfigurationSource()) }
-            .authorizeHttpRequests {
-                val matcher = it
-                matcher
-                    // Auth endpoints (public)
-                    .requestMatchers("/auth/register", "/auth/login", "/auth/refresh").permitAll()
+            .authorizeHttpRequests { authorizer ->
+                authorizer
+                    .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/firebase-login", "/auth/debug/token", "/auth/debug/firebase", "/auth/sync-firebase-users").permitAll()
 
-                // Conditionally expose swagger endpoints
                 if (swaggerEnabled) {
-                    matcher.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                    authorizer.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 }
 
-                matcher
-                    // Health (public)
+                authorizer
                     .requestMatchers("/actuator/health").permitAll()
-                    // All other endpoints require authentication
                     .anyRequest().authenticated()
             }
             .addFilterBefore(firebaseAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
@@ -53,17 +53,20 @@ class WebSecurityConfig(
     @Bean
     fun corsConfigurationSource(): UrlBasedCorsConfigurationSource {
         val source = UrlBasedCorsConfigurationSource()
-        val config = CorsConfiguration()
-        if (allowedOrigins.isNotBlank()) {
-            val origins = allowedOrigins.split(',').map { it.trim() }
-            config.allowedOrigins = origins
-        } else {
-            config.allowedOrigins = listOf("*")
+        val config = CorsConfiguration().apply {
+            allowedOrigins = parseCorsOrigins()
+            allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+            allowedHeaders = listOf(AUTHORIZATION, CACHE_CONTROL, CONTENT_TYPE)
+            allowCredentials = true
         }
-        config.allowedMethods = listOf("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        config.allowedHeaders = listOf("Authorization", "Cache-Control", "Content-Type")
-        config.allowCredentials = true
-        source.registerCorsConfiguration("/**", config)
+        source.registerCorsConfiguration(CORS_ALLOW_ALL, config)
         return source
     }
+
+    private fun parseCorsOrigins(): List<String> =
+        if (allowedOrigins.isNotBlank()) {
+            allowedOrigins.split(',').map { it.trim() }
+        } else {
+            listOf("*")
+        }
 }

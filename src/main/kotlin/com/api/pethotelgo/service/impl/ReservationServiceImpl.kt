@@ -2,6 +2,7 @@ package com.api.pethotelgo.service.impl
 
 import com.api.pethotelgo.exception.*
 import com.api.pethotelgo.model.entity.Reservation
+import com.api.pethotelgo.model.dto.CreateReservationRequest
 import com.api.pethotelgo.model.dto.DayCapacity
 import com.api.pethotelgo.model.enums.ReservationStatus
 import com.api.pethotelgo.repository.ReservationRepository
@@ -9,8 +10,10 @@ import com.api.pethotelgo.repository.PetRepository
 import com.api.pethotelgo.repository.OwnerRepository
 import com.api.pethotelgo.service.ReservationService
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 import java.time.LocalDate
 import java.time.ZoneId
+import java.math.BigDecimal
 
 @Service
 class ReservationServiceImpl(
@@ -45,7 +48,53 @@ class ReservationServiceImpl(
         return reservationRepository.findByPetId(petId)
     }
 
-    override fun createReservation(reservation: Reservation): Reservation {
+    override fun createReservation(request: CreateReservationRequest): Reservation {
+        // Find pet and owner
+        val pet = petRepository.findById(request.petId)
+            .orElseThrow { PetNotFoundException() }
+        val owner = ownerRepository.findById(request.ownerId)
+            .orElseThrow { OwnerNotFoundException() }
+
+        // Calculate daily rate based on pet size
+        val dailyRate = when (pet.size.toString()) {
+            "pequeno", "medio" -> BigDecimal("50.00")
+            "grande" -> BigDecimal("80.00")
+            else -> BigDecimal("50.00") // Default for other sizes
+        }
+
+        // Calculate total amount
+        val nights = java.time.temporal.ChronoUnit.DAYS.between(
+            request.checkIn.toLocalDate(),
+            request.checkOut.toLocalDate()
+        )
+        val subtotal = dailyRate.multiply(BigDecimal(nights))
+
+        // Apply discount if provided
+        val totalAmount = if (request.discountPercentage != null && request.discountPercentage > BigDecimal.ZERO) {
+            val discountAmount = subtotal.multiply(request.discountPercentage.divide(BigDecimal("100")))
+            subtotal.subtract(discountAmount)
+        } else {
+            subtotal
+        }
+
+        // Create reservation entity
+        val reservation = Reservation(
+            id = java.util.UUID.randomUUID().toString(),
+            pet = pet,
+            owner = owner,
+            checkIn = request.checkIn,
+            checkOut = request.checkOut,
+            status = request.status,
+            notes = request.notes,
+            dailyRate = dailyRate,
+            discountPercentage = request.discountPercentage,
+            createdAt = LocalDateTime.now()
+        )
+
+        return saveReservation(reservation)
+    }
+
+    private fun saveReservation(reservation: Reservation): Reservation {
         validateReservationData(reservation)
 
         // Business Rule: Verify pet exists
@@ -195,7 +244,7 @@ class ReservationServiceImpl(
         }
 
         // Business Rule 5: Cannot reserve in the past
-        if (reservation.checkIn.isBefore(java.time.Instant.now())) {
+        if (reservation.checkIn.isBefore(java.time.LocalDateTime.now())) {
             throw ValidationException("Cannot create reservation in the past")
         }
 

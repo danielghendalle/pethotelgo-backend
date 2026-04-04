@@ -11,7 +11,7 @@ import java.io.FileInputStream
 
 @Configuration
 class FirebaseConfig(
-    @Value("\${firebase.credentials.path:}")
+    @Value("\${firebase.credentials.path}")
     private val firebaseCredentialsPath: String
 ) {
 
@@ -20,7 +20,6 @@ class FirebaseConfig(
         // Initialize Firebase if not already initialized
         if (FirebaseApp.getApps().isEmpty()) {
             val options = if (firebaseCredentialsPath.isNotBlank()) {
-                // Load from JSON file (e.g., service account key)
                 val serviceAccount = FileInputStream(firebaseCredentialsPath)
                 val credentials = GoogleCredentials.fromStream(serviceAccount)
                 FirebaseOptions.builder()

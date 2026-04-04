@@ -11,5 +11,9 @@ interface AuthService {
     fun logout(userId: String)
     fun refreshToken(refreshToken: String): AuthResponse
     fun validateCredentials(email: String, password: String): User
+    fun verifyFirebaseToken(idToken: String): User
+    fun getUserByFirebaseUid(firebaseUid: String): User
+    fun debugFirebase(): Map<String, Any>
+    fun syncFirebaseUsers(): Map<String, Any>
 }
 

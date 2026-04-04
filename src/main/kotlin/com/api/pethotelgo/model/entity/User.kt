@@ -7,6 +7,7 @@ import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 import com.api.pethotelgo.model.enums.UserRole
+import com.api.pethotelgo.model.dto.UserDTO
 
 @Entity
 @Table(name = "users")
@@ -50,5 +51,12 @@ class User(
     override fun isCredentialsNonExpired(): Boolean = isActive
 
     override fun isEnabled(): Boolean = isActive
+
+    fun toDTO(): UserDTO = UserDTO(
+        id = this.id,
+        email = this.email,
+        name = this.name,
+        role = this.role.name
+    )
 }
 

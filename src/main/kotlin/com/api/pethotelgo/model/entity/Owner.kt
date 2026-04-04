@@ -1,12 +1,14 @@
 package com.api.pethotelgo.model.entity
 
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
-import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
@@ -19,11 +21,16 @@ class Owner(
 
     var phone: String = "",
 
-    var createdAt: Instant = Instant.now(),
+    var email: String = "",
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
+    var createdAt: LocalDateTime = LocalDateTime.now(),
 
     @OneToMany(mappedBy = "owner", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
     var pets: MutableList<Pet> = mutableListOf(),
 
     @OneToMany(mappedBy = "owner", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
     var reservations: MutableList<Reservation> = mutableListOf()
 )

@@ -67,8 +67,8 @@ class GlobalExceptionHandler {
                 else -> ErrorCode.INTERNAL_ERROR.code
             },
             status = status.value(),
-            error = status.reasonPhrase,
-            message = ex.reason ?: status.reasonPhrase
+            error = ex.titleMessageCode,
+            message = ex.reason.toString()
         )
         return ResponseEntity.status(status).body(body)
     }

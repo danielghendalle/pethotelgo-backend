@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 
+data class FirebaseTokenRequest(val idToken: String)
+
 @RequestMapping("/auth")
 @Tag(name = "Authentication", description = "User authentication endpoints (login, register, refresh token)")
 interface AuthApi {
@@ -20,13 +22,25 @@ interface AuthApi {
     @PostMapping("/login")
     @Operation(
         summary = "Login user",
-        description = "Authenticate user with email and password",
+        description = "Authenticate user with email and password, returns Firebase custom token for client-side authentication",
         responses = [
-            ApiResponse(responseCode = "200", description = "Login successful"),
-            ApiResponse(responseCode = "401", description = "Invalid credentials")
+            ApiResponse(responseCode = "200", description = "Login successful, Firebase custom token returned"),
+            ApiResponse(responseCode = "401", description = "Invalid credentials or user not found"),
+            ApiResponse(responseCode = "400", description = "Invalid email format")
         ]
     )
     fun login(@RequestBody request: LoginRequest): ResponseEntity<AuthResponse>
+
+    @PostMapping("/firebase-login")
+    @Operation(
+        summary = "Login with Firebase token",
+        description = "Authenticate user using Firebase ID token",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Firebase login successful"),
+            ApiResponse(responseCode = "401", description = "Invalid Firebase token")
+        ]
+    )
+    fun firebaseLogin(@RequestBody request: FirebaseTokenRequest): ResponseEntity<AuthResponse>
 
     @PostMapping("/register")
     @Operation(
@@ -63,6 +77,26 @@ interface AuthApi {
     )
     fun refreshToken(@RequestBody request: RefreshTokenRequest): ResponseEntity<AuthResponse>
 
+    @GetMapping("/debug/token")
+    @Operation(
+        summary = "Debug token extraction",
+        description = "Check if token is being extracted from headers",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Token debug information")
+        ]
+    )
+    fun debugToken(@RequestHeader("Authorization") authHeader: String?): ResponseEntity<Map<String, String>>
+
+    @GetMapping("/debug/firebase")
+    @Operation(
+        summary = "Debug Firebase connection",
+        description = "Check Firebase connection and list users (debug only)",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Debug information")
+        ]
+    )
+    fun debugFirebase(): ResponseEntity<Map<String, Any>>
+
     @GetMapping("/me")
     @SecurityRequirement(name = "bearer-jwt")
     @Operation(
@@ -74,5 +108,15 @@ interface AuthApi {
         ]
     )
     fun getCurrentUser(authentication: Authentication): ResponseEntity<String>
+
+    @PostMapping("/sync-firebase-users")
+    @Operation(
+        summary = "Sync Firebase users to local database",
+        description = "Create local users for all Firebase users that don't exist locally",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Users synced successfully")
+        ]
+    )
+    fun syncFirebaseUsers(): ResponseEntity<Map<String, Any>>
 }
 

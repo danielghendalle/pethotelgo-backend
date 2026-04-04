@@ -1,6 +1,7 @@
 package com.api.pethotelgo.controller
 
 import com.api.pethotelgo.controller.api.AuthApi
+import com.api.pethotelgo.controller.api.FirebaseTokenRequest
 import com.api.pethotelgo.model.dto.AuthResponse
 import com.api.pethotelgo.model.dto.LoginRequest
 import com.api.pethotelgo.model.dto.RefreshTokenRequest
@@ -9,6 +10,7 @@ import com.api.pethotelgo.service.AuthService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
+import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -16,6 +18,16 @@ class AuthController(private val authService: AuthService) : AuthApi {
 
     override fun login(request: LoginRequest): ResponseEntity<AuthResponse> {
         val response = authService.login(request)
+        return ResponseEntity.ok(response)
+    }
+
+    override fun firebaseLogin(request: FirebaseTokenRequest): ResponseEntity<AuthResponse> {
+        val user = authService.verifyFirebaseToken(request.idToken)
+        val response = AuthResponse(
+            user = user.toDTO(),
+            token = request.idToken,
+            refreshToken = ""
+        )
         return ResponseEntity.ok(response)
     }
 
@@ -36,6 +48,25 @@ class AuthController(private val authService: AuthService) : AuthApi {
 
     override fun getCurrentUser(authentication: Authentication): ResponseEntity<String> {
         return ResponseEntity.ok("Authenticated as: ${authentication.name}")
+    }
+
+    override fun debugFirebase(): ResponseEntity<Map<String, Any>> {
+        val debugInfo = authService.debugFirebase()
+        return ResponseEntity.ok(debugInfo)
+    }
+
+    override fun debugToken(@RequestHeader("Authorization") authHeader: String?): ResponseEntity<Map<String, String>> {
+        val token = authHeader?.substringAfter("Bearer ")
+        return ResponseEntity.ok(mapOf(
+            "authHeader" to (authHeader ?: "null"),
+            "extractedToken" to (token ?: "null"),
+            "tokenLength" to (token?.length ?: 0).toString()
+        ))
+    }
+
+    override fun syncFirebaseUsers(): ResponseEntity<Map<String, Any>> {
+        val syncResult = authService.syncFirebaseUsers()
+        return ResponseEntity.ok(syncResult)
     }
 }
 

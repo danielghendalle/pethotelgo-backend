@@ -1,5 +1,6 @@
 package com.api.pethotelgo.controller.api
 
+import com.api.pethotelgo.model.dto.CreateReservationRequest
 import com.api.pethotelgo.model.entity.Reservation
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
@@ -36,7 +37,7 @@ interface ReservationApi {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create reservation", description = "Create a new pet reservation")
-    fun create(@RequestBody reservation: Reservation): Reservation
+    fun create(@RequestBody request: CreateReservationRequest): Reservation
 
     @PutMapping("/{id}")
     @Operation(summary = "Update reservation", description = "Update reservation details")

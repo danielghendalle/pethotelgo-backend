@@ -8,9 +8,12 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UserDetailsService
+import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.stereotype.Component
-import org.springframework.util.StringUtils
 import org.springframework.web.filter.OncePerRequestFilter
+
+private const val BEARER_PREFIX = "Bearer "
+private const val AUTHORIZATION_HEADER = "Authorization"
 
 @Component
 class FirebaseAuthenticationFilter(
@@ -24,47 +27,100 @@ class FirebaseAuthenticationFilter(
         filterChain: FilterChain
     ) {
         try {
-            val idToken = getIdTokenFromRequest(request)
+            val idToken = extractBearerToken(request)
+            logger.debug("Request to: ${request.requestURI}")
+            logger.debug("Authorization header: ${request.getHeader(AUTHORIZATION_HEADER)}")
+            
             if (idToken != null) {
-                // Verify Firebase ID token
-                val decodedToken = firebaseAuth.verifyIdToken(idToken)
-                val email = decodedToken.email
-
-                if (email != null) {
-                    // Load user details from local database
-                    // If user doesn't exist in local DB, createOrUpdate on first login
-                    try {
-                        val userDetails = userDetailsService.loadUserByUsername(email)
-                        val authentication = UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.authorities
-                        )
-                        SecurityContextHolder.getContext().authentication = authentication
-                    } catch (_: Exception) {
-                        // User not found in local database - could auto-create or require manual setup
-                        // For now, log and continue (request will be denied by authorization rules)
-                        logger.warn("Firebase user not found in local database: $email")
-                    }
-                }
+                logger.debug("Attempting to authenticate with Firebase token")
+                authenticateWithFirebaseToken(idToken)
+            } else {
+                logger.debug("No Bearer token found in request")
             }
         } catch (e: FirebaseAuthException) {
-            // Invalid or expired token - continue without authentication
-            logger.debug("Firebase token verification failed: ${e.message}")
+            logger.error("Firebase token verification failed: ${e.message} - ErrorCode: ${e.authErrorCode}")
         } catch (e: Exception) {
-            // Other errors - continue without authentication
-            logger.debug("Authentication filter error: ${e.message}")
+            logger.error("Authentication filter error: ${e.message}", e)
         }
         filterChain.doFilter(request, response)
     }
 
-    private fun getIdTokenFromRequest(request: HttpServletRequest): String? {
-        val bearerToken = request.getHeader("Authorization")
-        return if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            bearerToken.substring(7)
+    private fun extractBearerToken(request: HttpServletRequest): String? {
+        val bearerToken = request.getHeader(AUTHORIZATION_HEADER) ?: return null
+        return if (bearerToken.startsWith(BEARER_PREFIX)) {
+            bearerToken.substring(BEARER_PREFIX.length)
         } else {
             null
         }
     }
+
+    private fun authenticateWithFirebaseToken(token: String) {
+        logger.debug("Verifying Firebase token...")
+        
+        // Try to verify as ID token first, then as custom token
+        var email: String? = null
+        var isCustomToken = false
+        
+        try {
+            val decodedToken = firebaseAuth.verifyIdToken(token)
+            email = decodedToken.email
+            logger.debug("Token verified as ID token")
+        } catch (e: FirebaseAuthException) {
+            logger.debug("ID token verification failed, trying as custom token...")
+            try {
+                // For custom tokens, extract UID and get user
+                val uid = extractUidFromCustomToken(token)
+                if (uid != null) {
+                    val user = firebaseAuth.getUser(uid)
+                    email = user.email
+                    isCustomToken = true
+                    logger.debug("Token verified as custom token for user: ${user.email}")
+                } else {
+                    throw IllegalArgumentException("Unable to extract UID from custom token")
+                }
+            } catch (customTokenError: FirebaseAuthException) {
+                logger.error("Custom token verification failed: ${customTokenError.message}")
+                throw customTokenError
+            }
+        }
+        
+        if (email == null) {
+            throw IllegalArgumentException("Unable to extract email from token")
+        }
+        
+        logger.debug("Token verified for email: $email (Custom: $isCustomToken)")
+
+        try {
+            val userDetails = userDetailsService.loadUserByUsername(email)
+            val authentication = UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.authorities
+            )
+            SecurityContextHolder.getContext().authentication = authentication
+            logger.debug("Authentication successful for user: $email")
+        } catch (_: UsernameNotFoundException) {
+            logger.warn("Firebase user not found in local database: $email")
+            throw UsernameNotFoundException("User $email not found in local database")
+        }
+    }
+    
+    private fun extractUidFromCustomToken(customToken: String): String? {
+        return try {
+            // Custom tokens are JWT, we can decode the payload without verification
+            val parts = customToken.split(".")
+            if (parts.size >= 2) {
+                val payload = String(java.util.Base64.getUrlDecoder().decode(parts[1]))
+                // Parse JSON manually to avoid dependency issues
+                val uidPattern = """"uid":\s*"([^"]+)"""".toRegex()
+                val match = uidPattern.find(payload)
+                match?.groupValues?.get(1)
+            } else null
+        } catch (e: Exception) {
+            logger.debug("Failed to extract UID from custom token: ${e.message}")
+            null
+        }
+    }
 }
+
 
