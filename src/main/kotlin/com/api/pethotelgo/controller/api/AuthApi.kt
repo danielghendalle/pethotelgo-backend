@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
@@ -22,9 +21,9 @@ interface AuthApi {
     @PostMapping("/login")
     @Operation(
         summary = "Login user",
-        description = "Authenticate user with email and password, returns Firebase custom token for client-side authentication",
+        description = "Authenticate user with email and password, returns Firebase custom token",
         responses = [
-            ApiResponse(responseCode = "200", description = "Login successful, Firebase custom token returned"),
+            ApiResponse(responseCode = "200", description = "Login successful"),
             ApiResponse(responseCode = "401", description = "Invalid credentials or user not found"),
             ApiResponse(responseCode = "400", description = "Invalid email format")
         ]
@@ -77,23 +76,11 @@ interface AuthApi {
     )
     fun refreshToken(@RequestBody request: RefreshTokenRequest): ResponseEntity<AuthResponse>
 
-    @GetMapping("/debug/token")
-    @Operation(
-        summary = "Debug token extraction",
-        description = "Check if token is being extracted from headers",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Token debug information")
-        ]
-    )
-    fun debugToken(@RequestHeader("Authorization") authHeader: String?): ResponseEntity<Map<String, String>>
-
     @GetMapping("/debug/firebase")
     @Operation(
         summary = "Debug Firebase connection",
-        description = "Check Firebase connection and list users (debug only)",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Debug information")
-        ]
+        description = "Check Firebase connection and list users",
+        responses = [ApiResponse(responseCode = "200", description = "Debug information")]
     )
     fun debugFirebase(): ResponseEntity<Map<String, Any>>
 
@@ -113,10 +100,7 @@ interface AuthApi {
     @Operation(
         summary = "Sync Firebase users to local database",
         description = "Create local users for all Firebase users that don't exist locally",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Users synced successfully")
-        ]
+        responses = [ApiResponse(responseCode = "200", description = "Users synced successfully")]
     )
     fun syncFirebaseUsers(): ResponseEntity<Map<String, Any>>
 }
-

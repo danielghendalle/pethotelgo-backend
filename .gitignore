@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Credentials - never commit ###
+src/main/resources/google-service-account-key.json
+src/main/resources/firebase-service-account.json
+src/main/resources/application-dev.properties
+.env
+.DS_Store
+src/**/.DS_Store
+

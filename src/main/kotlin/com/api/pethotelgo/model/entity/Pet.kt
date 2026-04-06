@@ -51,6 +51,7 @@ class Pet(
 
     var feedingAmount: String = "",
 
+    @Column(columnDefinition = "text")
     var vaccinationCardUrl: String? = null,
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")

@@ -35,7 +35,7 @@ class WebSecurityConfig(
             .cors { it.configurationSource(corsConfigurationSource()) }
             .authorizeHttpRequests { authorizer ->
                 authorizer
-                    .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/firebase-login", "/auth/debug/token", "/auth/debug/firebase", "/auth/sync-firebase-users").permitAll()
+                    .requestMatchers("/auth/register", "/auth/login", "/auth/refresh", "/auth/firebase-login", "/auth/debug/firebase", "/auth/sync-firebase-users").permitAll()
 
                 if (swaggerEnabled) {
                     authorizer.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

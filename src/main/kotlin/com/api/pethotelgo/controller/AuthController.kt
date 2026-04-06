@@ -10,64 +10,36 @@ import com.api.pethotelgo.service.AuthService
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
-import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class AuthController(private val authService: AuthService) : AuthApi {
 
-    override fun login(request: LoginRequest): ResponseEntity<AuthResponse> {
-        val response = authService.login(request)
-        return ResponseEntity.ok(response)
-    }
+    override fun login(request: LoginRequest): ResponseEntity<AuthResponse> =
+        ResponseEntity.ok(authService.login(request))
 
     override fun firebaseLogin(request: FirebaseTokenRequest): ResponseEntity<AuthResponse> {
         val user = authService.verifyFirebaseToken(request.idToken)
-        val response = AuthResponse(
-            user = user.toDTO(),
-            token = request.idToken,
-            refreshToken = ""
-        )
-        return ResponseEntity.ok(response)
+        return ResponseEntity.ok(AuthResponse(user = user.toDTO(), token = request.idToken, refreshToken = ""))
     }
 
-    override fun register(request: RegisterRequest): ResponseEntity<AuthResponse> {
-        val response = authService.register(request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
-    }
+    override fun register(request: RegisterRequest): ResponseEntity<AuthResponse> =
+        ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request))
 
     override fun logout(authentication: Authentication): ResponseEntity<Void> {
         authService.logout(authentication.name)
         return ResponseEntity.noContent().build()
     }
 
-    override fun refreshToken(request: RefreshTokenRequest): ResponseEntity<AuthResponse> {
-        val response = authService.refreshToken(request.refreshToken)
-        return ResponseEntity.ok(response)
-    }
+    override fun refreshToken(request: RefreshTokenRequest): ResponseEntity<AuthResponse> =
+        ResponseEntity.ok(authService.refreshToken(request.refreshToken))
 
-    override fun getCurrentUser(authentication: Authentication): ResponseEntity<String> {
-        return ResponseEntity.ok("Authenticated as: ${authentication.name}")
-    }
+    override fun getCurrentUser(authentication: Authentication): ResponseEntity<String> =
+        ResponseEntity.ok("Authenticated as: ${authentication.name}")
 
-    override fun debugFirebase(): ResponseEntity<Map<String, Any>> {
-        val debugInfo = authService.debugFirebase()
-        return ResponseEntity.ok(debugInfo)
-    }
+    override fun debugFirebase(): ResponseEntity<Map<String, Any>> =
+        ResponseEntity.ok(authService.debugFirebase())
 
-    override fun debugToken(@RequestHeader("Authorization") authHeader: String?): ResponseEntity<Map<String, String>> {
-        val token = authHeader?.substringAfter("Bearer ")
-        return ResponseEntity.ok(mapOf(
-            "authHeader" to (authHeader ?: "null"),
-            "extractedToken" to (token ?: "null"),
-            "tokenLength" to (token?.length ?: 0).toString()
-        ))
-    }
-
-    override fun syncFirebaseUsers(): ResponseEntity<Map<String, Any>> {
-        val syncResult = authService.syncFirebaseUsers()
-        return ResponseEntity.ok(syncResult)
-    }
+    override fun syncFirebaseUsers(): ResponseEntity<Map<String, Any>> =
+        ResponseEntity.ok(authService.syncFirebaseUsers())
 }
-
-

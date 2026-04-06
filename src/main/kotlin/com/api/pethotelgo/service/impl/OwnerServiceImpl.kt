@@ -11,7 +11,6 @@ import com.api.pethotelgo.service.OwnerService
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
 import java.util.UUID
- 
 
 @Service
 class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerService {
@@ -33,15 +32,13 @@ class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerServ
         return ownerRepository.save(owner)
     }
 
-    override fun toResponse(owner: Owner): OwnerResponse {
-        return OwnerResponse(
-            id = owner.id,
-            name = owner.name,
-            email = owner.email,
-            phone = owner.phone,
-            createdAt = owner.createdAt
-        )
-    }
+    override fun toResponse(owner: Owner) = OwnerResponse(
+        id = owner.id,
+        name = owner.name,
+        email = owner.email,
+        phone = owner.phone,
+        createdAt = owner.createdAt
+    )
 
     override fun updateOwner(id: String, data: UpdateOwnerRequest): Owner {
         val existing = getOwnerById(id)
@@ -53,34 +50,16 @@ class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerServ
     }
 
     override fun deleteOwner(id: String) {
-        val owner = getOwnerById(id)
-        ownerRepository.delete(owner)
+        ownerRepository.delete(getOwnerById(id))
     }
 
     override fun validateOwnerData(owner: Owner) {
-        // Business Rule 1: Name cannot be empty or blank
-        if (owner.name.isBlank()) {
-            throw ValidationException("Owner name is required")
-        }
-
-        // Business Rule 2: Email cannot be empty or blank
-        if (owner.email.isBlank()) {
-            throw ValidationException("Owner email is required")
-        }
-
-        // Business Rule 3: Phone must be provided and non-empty
-        if (owner.phone.isBlank()) {
-            throw ValidationException("Owner phone is required")
-        }
-
-        // Business Rule 4: Phone must be at least 8 digits
+        if (owner.name.isBlank()) throw ValidationException("Owner name is required")
+        if (owner.name.length > 100) throw ValidationException("Owner name cannot exceed 100 characters")
+        if (owner.email.isBlank()) throw ValidationException("Owner email is required")
+        if (owner.phone.isBlank()) throw ValidationException("Owner phone is required")
         if (owner.phone.replace(Regex("[^0-9]"), "").length < 8) {
             throw ValidationException("Phone must have at least 8 digits")
-        }
-
-        // Business Rule 5: Name length validation
-        if (owner.name.length > 100) {
-            throw ValidationException("Owner name cannot exceed 100 characters")
         }
     }
 }
