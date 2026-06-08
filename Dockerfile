@@ -10,6 +10,8 @@ RUN mvn -B -DskipTests package
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /workspace/target/*.jar /app/app.jar
 
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
@@ -21,8 +23,8 @@ ENV FIREBASE_CREDENTIALS_PATH=""
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD java -cp app.jar org.springframework.boot.loader.JarLauncher -c "echo" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=5 \
+  CMD curl -f http://localhost:8080/api/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS \
   -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-prod} \
