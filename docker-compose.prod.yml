@@ -5,7 +5,7 @@ services:
     container_name: pethotelgo-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: pethoteldb
+      POSTGRES_DB: pethotel
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
@@ -13,7 +13,7 @@ services:
     mem_limit: 192m
     memswap_limit: 192m
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d pethoteldb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d pethotel"]
       interval: 10s
       timeout: 5s
       retries: 5
