@@ -1,4 +1,1 @@
--- Migration: Alter vaccination_card_url column to TEXT for base64 support
-ALTER TABLE pets
-MODIFY COLUMN vaccination_card_url TEXT;
-
+-- vaccination_card_url on pets is created as TEXT directly in V3; no action needed here.
