@@ -21,6 +21,32 @@ if [[ ! -f ".env" ]]; then
     exit 1
 fi
 
+# Verify required env vars are set in .env
+REQUIRED_VARS=(POSTGRES_USER POSTGRES_PASSWORD FIREBASE_CREDENTIALS_BASE64 CORS_ALLOWED_ORIGINS)
+MISSING=()
+for var in "${REQUIRED_VARS[@]}"; do
+    val=$(grep -E "^${var}=" .env | cut -d= -f2- | tr -d '[:space:]')
+    if [[ -z "$val" ]]; then
+        MISSING+=("$var")
+    fi
+done
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+    echo "ERROR: The following required variables are empty in .env:"
+    for v in "${MISSING[@]}"; do echo "  - $v"; done
+    exit 1
+fi
+
+# Warn if swap is not configured (critical for 1 GB RAM VMs)
+SWAP_TOTAL=$(free -m | awk '/^Swap:/ {print $2}')
+if [[ "$SWAP_TOTAL" -lt 512 ]]; then
+    echo "WARNING: Swap is ${SWAP_TOTAL}MB. On a 1 GB RAM VM the Maven build may OOM."
+    echo "         Run the following to add 2 GB swap before deploying:"
+    echo "           sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile"
+    echo "           sudo mkswap /swapfile && sudo swapon /swapfile"
+    echo "           echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab"
+    echo ""
+fi
+
 echo "=== PetHotelGO Deploy ==="
 
 # ── Pull latest code ───────────────────────────────────────────────────────────
@@ -28,8 +54,13 @@ echo "[1/4] Pulling latest code..."
 git pull --ff-only
 
 # ── Build images ───────────────────────────────────────────────────────────────
+# Build sequentially to avoid OOM on low-memory VMs (1 GB RAM).
+# Maven + npm running in parallel easily exceeds available memory.
 echo "[2/4] Building Docker images (this may take a few minutes)..."
-docker compose -f "$COMPOSE_FILE" build --no-cache
+echo "  Building backend (api)..."
+docker compose -f "$COMPOSE_FILE" build --no-cache api
+echo "  Building frontend..."
+docker compose -f "$COMPOSE_FILE" build --no-cache frontend
 
 # ── Start / restart containers ─────────────────────────────────────────────────
 echo "[3/4] Starting containers..."

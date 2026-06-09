@@ -4,7 +4,7 @@ FROM maven:3.9.4-eclipse-temurin-17 AS build
 WORKDIR /workspace
 COPY pom.xml .
 COPY src ./src
-RUN mvn -B -DskipTests package
+RUN MAVEN_OPTS="-Xmx512m -XX:MaxMetaspaceSize=256m" mvn -B -DskipTests package
 
 # Runtime stage
 FROM eclipse-temurin:17-jre
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 
 COPY --from=build /workspace/target/*.jar /app/app.jar
 
-ENV JAVA_OPTS="-Xms256m -Xmx512m"
+ENV JAVA_OPTS="-Xms64m -Xmx384m"
 
 # Firebase credentials can be provided either:
 #   - As base64 JSON string via FIREBASE_CREDENTIALS_BASE64 env var (recommended for cloud)
