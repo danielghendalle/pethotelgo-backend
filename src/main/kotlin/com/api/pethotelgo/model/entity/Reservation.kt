@@ -2,6 +2,7 @@ package com.api.pethotelgo.model.entity
 
 import com.api.pethotelgo.model.entity.Owner
 import com.api.pethotelgo.model.enums.ReservationStatus
+import com.fasterxml.jackson.annotation.JsonFormat
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -11,7 +12,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
-import java.time.Instant
+import java.math.BigDecimal
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
@@ -28,9 +30,11 @@ class Reservation(
     @JoinColumn(name = "owner_id")
     var owner: Owner? = null,
 
-    var checkIn: Instant = Instant.now(),
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
+    var checkIn: LocalDateTime = LocalDateTime.now(),
 
-    var checkOut: Instant = Instant.now(),
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
+    var checkOut: LocalDateTime = LocalDateTime.now(),
 
     @Enumerated(EnumType.STRING)
     var status: ReservationStatus = ReservationStatus.pending,
@@ -38,5 +42,12 @@ class Reservation(
     @Column(columnDefinition = "text")
     var notes: String = "",
 
-    var createdAt: Instant = Instant.now()
+    @Column(precision = 10, scale = 2)
+    var dailyRate: BigDecimal? = null,
+
+    @Column(precision = 5, scale = 2)
+    var discountPercentage: BigDecimal? = null,
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
+    var createdAt: LocalDateTime = LocalDateTime.now()
 )

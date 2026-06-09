@@ -1,5 +1,7 @@
 package com.api.pethotelgo.controller.api
 
+import com.api.pethotelgo.model.dto.CreatePetRequest
+import com.api.pethotelgo.model.dto.UpdatePetRequest
 import com.api.pethotelgo.model.entity.Pet
 import com.api.pethotelgo.model.entity.Reservation
 import com.api.pethotelgo.model.entity.StayHistory
@@ -37,11 +39,11 @@ interface PetApi {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create pet", description = "Register a new pet")
-    fun create(@RequestBody pet: Pet): Pet
+    fun create(@RequestBody request: CreatePetRequest): Pet
 
     @PutMapping("/{id}")
     @Operation(summary = "Update pet", description = "Update pet information")
-    fun update(@PathVariable id: String, @RequestBody data: Pet): Pet
+    fun update(@PathVariable id: String, @RequestBody data: UpdatePetRequest): Pet
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

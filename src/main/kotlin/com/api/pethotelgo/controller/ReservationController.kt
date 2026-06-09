@@ -2,6 +2,7 @@ package com.api.pethotelgo.controller
 
 import com.api.pethotelgo.controller.api.ReservationApi
 import com.api.pethotelgo.exception.ValidationException
+import com.api.pethotelgo.model.dto.CreateReservationRequest
 import com.api.pethotelgo.model.entity.Reservation
 import com.api.pethotelgo.service.ReservationService
 import org.springframework.web.bind.annotation.RestController
@@ -22,7 +23,7 @@ class ReservationController(private val reservationService: ReservationService) 
 
     override fun getByPetPath(petId: String): List<Reservation> = reservationService.getReservationsByPetId(petId)
 
-    override fun create(reservation: Reservation): Reservation = reservationService.createReservation(reservation)
+    override fun create(request: CreateReservationRequest): Reservation = reservationService.createReservation(request)
 
     override fun update(id: String, data: Reservation): Reservation =
         reservationService.updateReservation(id, data)

@@ -8,10 +8,11 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
+
+data class FirebaseTokenRequest(val idToken: String)
 
 @RequestMapping("/auth")
 @Tag(name = "Authentication", description = "User authentication endpoints (login, register, refresh token)")
@@ -20,13 +21,25 @@ interface AuthApi {
     @PostMapping("/login")
     @Operation(
         summary = "Login user",
-        description = "Authenticate user with email and password",
+        description = "Authenticate user with email and password, returns Firebase custom token",
         responses = [
             ApiResponse(responseCode = "200", description = "Login successful"),
-            ApiResponse(responseCode = "401", description = "Invalid credentials")
+            ApiResponse(responseCode = "401", description = "Invalid credentials or user not found"),
+            ApiResponse(responseCode = "400", description = "Invalid email format")
         ]
     )
     fun login(@RequestBody request: LoginRequest): ResponseEntity<AuthResponse>
+
+    @PostMapping("/firebase-login")
+    @Operation(
+        summary = "Login with Firebase token",
+        description = "Authenticate user using Firebase ID token",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Firebase login successful"),
+            ApiResponse(responseCode = "401", description = "Invalid Firebase token")
+        ]
+    )
+    fun firebaseLogin(@RequestBody request: FirebaseTokenRequest): ResponseEntity<AuthResponse>
 
     @PostMapping("/register")
     @Operation(
@@ -63,6 +76,14 @@ interface AuthApi {
     )
     fun refreshToken(@RequestBody request: RefreshTokenRequest): ResponseEntity<AuthResponse>
 
+    @GetMapping("/debug/firebase")
+    @Operation(
+        summary = "Debug Firebase connection",
+        description = "Check Firebase connection and list users",
+        responses = [ApiResponse(responseCode = "200", description = "Debug information")]
+    )
+    fun debugFirebase(): ResponseEntity<Map<String, Any>>
+
     @GetMapping("/me")
     @SecurityRequirement(name = "bearer-jwt")
     @Operation(
@@ -74,5 +95,12 @@ interface AuthApi {
         ]
     )
     fun getCurrentUser(authentication: Authentication): ResponseEntity<String>
-}
 
+    @PostMapping("/sync-firebase-users")
+    @Operation(
+        summary = "Sync Firebase users to local database",
+        description = "Create local users for all Firebase users that don't exist locally",
+        responses = [ApiResponse(responseCode = "200", description = "Users synced successfully")]
+    )
+    fun syncFirebaseUsers(): ResponseEntity<Map<String, Any>>
+}

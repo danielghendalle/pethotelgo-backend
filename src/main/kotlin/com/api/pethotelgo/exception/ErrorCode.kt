@@ -10,6 +10,7 @@ enum class ErrorCode(val code: String, val status: HttpStatus, val defaultMessag
     STAY_HISTORY_NOT_FOUND("STAY_HISTORY_NOT_FOUND", HttpStatus.NOT_FOUND, "Stay history not found"),
     RESERVATION_NOT_FOUND("RESERVATION_NOT_FOUND", HttpStatus.NOT_FOUND, "Reservation not found"),
     USER_NOT_FOUND("USER_NOT_FOUND", HttpStatus.NOT_FOUND, "User not found"),
+    VACCINATION_CARD_NOT_FOUND("VACCINATION_CARD_NOT_FOUND", HttpStatus.NOT_FOUND, "Vaccination card not found"),
 
     // Validation / Business
     VALIDATION_ERROR("VALIDATION_ERROR", HttpStatus.BAD_REQUEST, "Validation error"),

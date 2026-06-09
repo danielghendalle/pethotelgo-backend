@@ -22,6 +22,8 @@ services:
       dockerfile: Dockerfile
     container_name: pethotelgo-api
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -37,44 +39,7 @@ services:
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
       SPRING_FLYWAY_ENABLED: "true"
       SPRING_FLYWAY_LOCATIONS: classpath:db/migration
-    expose:
-      - "8080"
-
-  frontend:
-    build:
-      context: ../pethotelgo-frontend
-      dockerfile: Dockerfile
-      args:
-        # VITE_API_URL must be /api so all requests go through Nginx
-        VITE_API_URL: /api
-    container_name: pethotelgo-frontend
-    restart: unless-stopped
-    expose:
-      - "80"
-
-  nginx:
-    image: nginx:alpine
-    container_name: pethotelgo-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/certbot/conf:/etc/letsencrypt:ro
-      - ./nginx/certbot/www:/var/www/certbot:ro
-    depends_on:
-      - api
-      - frontend
-
-  certbot:
-    image: certbot/certbot
-    container_name: pethotelgo-certbot
-    restart: unless-stopped
-    volumes:
-      - ./nginx/certbot/conf:/etc/letsencrypt
-      - ./nginx/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done;'"
 
 volumes:
   postgres_data:
+

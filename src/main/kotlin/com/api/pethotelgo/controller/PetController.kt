@@ -1,7 +1,9 @@
 package com.api.pethotelgo.controller
 
 import com.api.pethotelgo.controller.api.PetApi
+import com.api.pethotelgo.model.dto.CreatePetRequest
 import com.api.pethotelgo.model.entity.Pet
+import com.api.pethotelgo.model.dto.UpdatePetRequest
 import com.api.pethotelgo.model.entity.Reservation
 import com.api.pethotelgo.model.entity.StayHistory
 import com.api.pethotelgo.service.PetService
@@ -28,9 +30,9 @@ class PetController(
     override fun getStayHistoryByPet(petId: String): List<StayHistory> =
         stayHistoryService.getStayHistoriesByPetId(petId)
 
-    override fun create(pet: Pet): Pet = petService.createPet(pet)
+    override fun create(request: CreatePetRequest): Pet = petService.createPet(request)
 
-    override fun update(id: String, data: Pet): Pet =
+    override fun update(id: String, data: UpdatePetRequest): Pet =
         petService.updatePet(id, data)
 
     override fun delete(id: String) = petService.deletePet(id)
