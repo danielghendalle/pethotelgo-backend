@@ -15,21 +15,27 @@ class User(
     @Id
     var id: String = UUID.randomUUID().toString(),
 
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     var email: String = "",
 
+    @Column(nullable = false)
     var name: String = "",
 
-    @Column(name = "password_hash")
-    var passwordHash: String = "", // will be hashed
+    /** BCrypt digest of the user's password. */
+    @Column(name = "password_hash", nullable = false)
+    var passwordHash: String = "",
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     var role: UserRole = UserRole.USER,
 
+    @Column(nullable = false)
     var isActive: Boolean = true,
 
+    @Column(nullable = false)
     var createdAt: Instant = Instant.now(),
 
+    @Column(nullable = false)
     var updatedAt: Instant = Instant.now(),
 
     @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)

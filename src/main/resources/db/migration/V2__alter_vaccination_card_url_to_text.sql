@@ -1,1 +1,0 @@
--- vaccination_card_url on pets is created as TEXT directly in V3; no action needed here.

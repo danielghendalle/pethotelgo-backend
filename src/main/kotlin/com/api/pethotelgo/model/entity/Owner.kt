@@ -3,6 +3,7 @@ package com.api.pethotelgo.model.entity
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnore
 import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
@@ -17,12 +18,16 @@ class Owner(
     @Id
     var id: String = UUID.randomUUID().toString(),
 
+    @Column(nullable = false)
     var name: String = "",
 
+    @Column(nullable = false)
     var phone: String = "",
 
+    @Column(nullable = false)
     var email: String = "",
 
+    @Column(nullable = false)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     var createdAt: LocalDateTime = LocalDateTime.now(),
 

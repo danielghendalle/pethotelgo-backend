@@ -31,7 +31,7 @@ class VaccinationCard(
     @Column(name = "uploaded_at", nullable = false)
     var uploadedAt: LocalDateTime = LocalDateTime.now(),
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     var updatedAt: LocalDateTime = LocalDateTime.now()
 )
 

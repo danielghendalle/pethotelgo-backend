@@ -29,31 +29,40 @@ class Pet(
     @JoinColumn(name = "owner_id")
     var owner: Owner? = null,
 
+    @Column(nullable = false)
     var name: String = "",
 
+    @Column(nullable = false)
     var breed: String = "",
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     var size: PetSize = PetSize.medio,
 
+    @Column(nullable = false)
     var needsSeparateSpace: Boolean = false,
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     var sociability: SociabilityLevel = SociabilityLevel.media,
 
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "text", nullable = false)
     var allergies: String = "",
 
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "text", nullable = false)
     var specialCare: String = "",
 
+    @Column(nullable = false)
     var feedingSchedule: String = "",
 
+    @Column(nullable = false)
     var feedingAmount: String = "",
 
-    @Column(columnDefinition = "text")
+    // Holds a base64 data URI of the vaccination card (can be several MB) — needs LONGTEXT, not TEXT (64 KB).
+    @Column(columnDefinition = "LONGTEXT")
     var vaccinationCardUrl: String? = null,
 
+    @Column(nullable = false)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     var createdAt: LocalDateTime = LocalDateTime.now(),
 

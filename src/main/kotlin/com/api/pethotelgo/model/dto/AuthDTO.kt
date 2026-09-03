@@ -10,7 +10,10 @@ data class UserDTO(
 data class AuthResponse(
     val user: UserDTO,
     val token: String,
-    val refreshToken: String
+    val refreshToken: String,
+    /** Access token lifetime in seconds. */
+    val expiresIn: Long,
+    val tokenType: String = "Bearer"
 )
 
 data class LoginRequest(

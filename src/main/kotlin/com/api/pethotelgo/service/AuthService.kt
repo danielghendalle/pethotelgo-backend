@@ -8,12 +8,8 @@ import com.api.pethotelgo.model.entity.User
 interface AuthService {
     fun login(request: LoginRequest): AuthResponse
     fun register(request: RegisterRequest): AuthResponse
-    fun logout(userId: String)
     fun refreshToken(refreshToken: String): AuthResponse
-    fun validateCredentials(email: String, password: String): User
-    fun verifyFirebaseToken(idToken: String): User
-    fun getUserByFirebaseUid(firebaseUid: String): User
-    fun debugFirebase(): Map<String, Any>
-    fun syncFirebaseUsers(): Map<String, Any>
+    /** Revokes every active refresh token of the user, so no new access token can be minted. */
+    fun logout(userId: String)
+    fun getById(userId: String): User
 }
-

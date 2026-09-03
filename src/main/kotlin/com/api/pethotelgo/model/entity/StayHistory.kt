@@ -24,13 +24,14 @@ class StayHistory(
     @JoinColumn(name = "reservation_id")
     var reservation: Reservation? = null,
 
+    @Column(nullable = false)
     var checkIn: Instant = Instant.now(),
 
     var checkOut: Instant? = null,
 
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "text", nullable = false)
     var behavior: String = "",
 
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "text", nullable = false)
     var notes: String = ""
 )

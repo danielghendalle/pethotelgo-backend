@@ -14,14 +14,14 @@ class RefreshToken(
     @JoinColumn(name = "user_id")
     var user: User? = null,
 
-    @Column(unique = true)
-    var token: String? = null,
+    /** SHA-256 digest of the opaque token; the token itself is never persisted. */
+    @Column(name = "token_hash", unique = true, nullable = false)
+    var tokenHash: String = "",
 
-    @Column(name = "token_hash", unique = true)
-    var tokenHash: String? = null,
-
+    @Column(nullable = false)
     var expiresAt: Instant = Instant.now(),
 
+    @Column(nullable = false)
     var createdAt: Instant = Instant.now(),
 
     var revokedAt: Instant? = null

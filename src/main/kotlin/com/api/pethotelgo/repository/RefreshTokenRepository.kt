@@ -7,7 +7,6 @@ import java.util.Optional
 
 @Repository
 interface RefreshTokenRepository : JpaRepository<RefreshToken, String> {
-    fun findByToken(token: String): Optional<RefreshToken>
     fun findByTokenHash(tokenHash: String): Optional<RefreshToken>
     fun findByUserIdAndRevokedAtIsNull(userId: String): List<RefreshToken>
 }

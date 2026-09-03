@@ -15,6 +15,7 @@ enum class ErrorCode(val code: String, val status: HttpStatus, val defaultMessag
     // Validation / Business
     VALIDATION_ERROR("VALIDATION_ERROR", HttpStatus.BAD_REQUEST, "Validation error"),
     BUSINESS_RULE_VIOLATION("BUSINESS_RULE_VIOLATION", HttpStatus.BAD_REQUEST, "Business rule violated"),
+    PAYLOAD_TOO_LARGE("PAYLOAD_TOO_LARGE", HttpStatus.PAYLOAD_TOO_LARGE, "Uploaded file is too large"),
 
     // Conflicts
     GENERIC_CONFLICT("CONFLICT", HttpStatus.CONFLICT, "Conflict"),

@@ -8,6 +8,7 @@ import com.api.pethotelgo.model.enums.ReservationStatus
 import com.api.pethotelgo.repository.ReservationRepository
 import com.api.pethotelgo.repository.PetRepository
 import com.api.pethotelgo.repository.OwnerRepository
+import com.api.pethotelgo.service.AppSettingsService
 import com.api.pethotelgo.service.ReservationService
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -19,7 +20,8 @@ import java.math.BigDecimal
 class ReservationServiceImpl(
     private val reservationRepository: ReservationRepository,
     private val petRepository: PetRepository,
-    private val ownerRepository: OwnerRepository
+    private val ownerRepository: OwnerRepository,
+    private val appSettingsService: AppSettingsService
 ) : ReservationService {
 
     companion object {
@@ -50,10 +52,10 @@ class ReservationServiceImpl(
         val pet = petRepository.findById(request.petId).orElseThrow { PetNotFoundException() }
         val owner = ownerRepository.findById(request.ownerId).orElseThrow { OwnerNotFoundException() }
 
-        val dailyRate = when (pet.size.toString()) {
-            "grande" -> BigDecimal("80.00")
-            else -> BigDecimal("50.00")
-        }
+        // Use the rate the operator typed in, if any; otherwise the configurable
+        // default for the pet's size (Configurações -> valores da hospedagem).
+        val dailyRate = request.dailyRate?.takeIf { it > BigDecimal.ZERO }
+            ?: appSettingsService.dailyRateFor(pet.size)
 
         val nights = java.time.temporal.ChronoUnit.DAYS.between(
             request.checkIn.toLocalDate(),

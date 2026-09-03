@@ -1,4 +1,5 @@
-target/
+target/*
+!target/pethotelgo-*.jar
 .git
 .gitignore
 README*
@@ -7,4 +8,3 @@ README*
 *.iml
 node_modules
 .DS_Store
-

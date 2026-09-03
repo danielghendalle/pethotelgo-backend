@@ -1,45 +1,29 @@
-services:
+# Local development — just the database.
+# Run the API with:  ./mvnw spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=dev"
+#
+#   docker compose up -d          # MySQL on localhost:3306 (db "pethotel", user pethotel/pethotel)
+#   docker compose down           # stop  (add -v to wipe the data volume)
 
+services:
   db:
-    image: postgres:16-alpine
+    image: mysql:8.4
     container_name: pethotelgo-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: pethotel
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MYSQL_DATABASE: pethotel
+      MYSQL_USER: ${MYSQL_USER:-pethotel}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-pethotel}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d pethotel"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${MYSQL_USER:-pethotel}", "-p${MYSQL_PASSWORD:-pethotel}"]
       interval: 10s
       timeout: 5s
-      retries: 5
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: pethotelgo-api
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      JDBC_DATABASE_URL: jdbc:postgresql://db:5432/pethotel
-      JDBC_DATABASE_USERNAME: ${POSTGRES_USER}
-      JDBC_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      FIREBASE_CREDENTIALS_BASE64: ${FIREBASE_CREDENTIALS_BASE64}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
-      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
-      SPRING_FLYWAY_ENABLED: "true"
-      SPRING_FLYWAY_LOCATIONS: classpath:db/migration
+      retries: 10
 
 volumes:
-  postgres_data:
-
+  mysql_data:

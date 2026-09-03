@@ -30,16 +30,19 @@ class Reservation(
     @JoinColumn(name = "owner_id")
     var owner: Owner? = null,
 
+    @Column(nullable = false)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     var checkIn: LocalDateTime = LocalDateTime.now(),
 
+    @Column(nullable = false)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     var checkOut: LocalDateTime = LocalDateTime.now(),
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     var status: ReservationStatus = ReservationStatus.pending,
 
-    @Column(columnDefinition = "text")
+    @Column(columnDefinition = "text", nullable = false)
     var notes: String = "",
 
     @Column(precision = 10, scale = 2)
@@ -48,6 +51,7 @@ class Reservation(
     @Column(precision = 5, scale = 2)
     var discountPercentage: BigDecimal? = null,
 
+    @Column(nullable = false)
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss")
     var createdAt: LocalDateTime = LocalDateTime.now()
 )
