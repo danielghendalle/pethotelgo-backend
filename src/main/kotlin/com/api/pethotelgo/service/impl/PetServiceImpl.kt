@@ -6,7 +6,6 @@ import com.api.pethotelgo.exception.ValidationException
 import com.api.pethotelgo.model.dto.CreatePetRequest
 import com.api.pethotelgo.model.dto.UpdatePetRequest
 import com.api.pethotelgo.model.entity.Pet
-import com.api.pethotelgo.model.enums.SociabilityLevel
 import com.api.pethotelgo.repository.PetRepository
 import com.api.pethotelgo.repository.OwnerRepository
 import com.api.pethotelgo.repository.VaccinationCardRepository
@@ -85,10 +84,6 @@ class PetServiceImpl(
         if (pet.breed.length > 50) throw ValidationException("Pet breed cannot exceed 50 characters")
         if (pet.feedingSchedule.isBlank()) throw ValidationException("Pet feeding schedule is required")
         if (pet.feedingAmount.isBlank()) throw ValidationException("Pet feeding amount is required")
-
-        if (pet.sociability == SociabilityLevel.baixa && !pet.needsSeparateSpace) {
-            throw ValidationException("Low sociability pets must have separate space")
-        }
 
         pet.vaccinationCardUrl?.takeIf { it.isNotBlank() }?.let {
             if (!isValidVaccinationCardUrl(it)) {

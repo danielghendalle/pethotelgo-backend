@@ -56,10 +56,18 @@ class OwnerServiceImpl(private val ownerRepository: OwnerRepository) : OwnerServ
     override fun validateOwnerData(owner: Owner) {
         if (owner.name.isBlank()) throw ValidationException("Owner name is required")
         if (owner.name.length > 100) throw ValidationException("Owner name cannot exceed 100 characters")
-        if (owner.email.isBlank()) throw ValidationException("Owner email is required")
+        // Email is only mandatory for user login accounts, not for a pet owner
+        // record — it's optional here, but must be well-formed when given.
+        if (owner.email.isNotBlank() && !EMAIL_REGEX.matches(owner.email)) {
+            throw ValidationException("Invalid email format")
+        }
         if (owner.phone.isBlank()) throw ValidationException("Owner phone is required")
         if (owner.phone.replace(Regex("[^0-9]"), "").length < 8) {
             throw ValidationException("Phone must have at least 8 digits")
         }
+    }
+
+    companion object {
+        private val EMAIL_REGEX = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }
